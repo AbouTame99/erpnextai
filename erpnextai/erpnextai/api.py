@@ -112,6 +112,10 @@ def get_item_details(item_code: str):
 	doc = frappe.get_doc("Item", item_code).as_dict()
 	return {k: v for k, v in doc.items() if not k.startswith('_') and v is not None}
 
+def get_customer_balance(customer: str):
+	"""Returns the outstanding balance for a customer."""
+	return frappe.db.get_value("Customer", customer, "outstanding_amount")
+
 def get_supplier_details(supplier: str):
 	"""Returns full supplier details stripped of metadata."""
 	doc = frappe.get_doc("Supplier", supplier).as_dict()
