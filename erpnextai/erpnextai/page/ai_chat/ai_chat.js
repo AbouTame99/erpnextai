@@ -148,40 +148,55 @@ erpnextai.AIChat = class {
     }
 
     render_ai_content($target, text) {
-        // Handle Chart tags
         let chart_regex = /<chart>([\s\S]*?)<\/chart>/g;
-        let match;
         let last_index = 0;
-        let clean_text = text;
+        let match;
 
         while ((match = chart_regex.exec(text)) !== null) {
+            // Append text before the chart
+            if (match.index > last_index) {
+                $target.append(frappe.markdown(text.substring(last_index, match.index)));
+            }
+
             try {
-                let chart_data = JSON.parse(match[1]);
+                let chart_json = match[1].trim();
+                let chart_data = JSON.parse(chart_json);
                 let chart_id = 'chart-' + Math.random().toString(36).substr(2, 9);
 
-                // Add placeholder for chart
-                let $chart_div = $(`<div class="chart-container"><div id="${chart_id}"></div></div>`);
-                $target.append(frappe.markdown(text.substring(last_index, match.index)));
-                $target.append($chart_div);
+                let $chart_container = $(`
+                    <div class="chart-wrapper" style="margin: 20px 0; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; min-height: 300px;">
+                        <div id="${chart_id}"></div>
+                    </div>
+                `);
+                $target.append($chart_container);
 
-                // Render chart after a short delay
+                // Render with a delay to ensure container is in DOM
                 setTimeout(() => {
-                    new frappe.Chart("#" + chart_id, {
-                        title: chart_data.title,
-                        data: chart_data.data,
-                        type: chart_data.type,
-                        height: 250,
-                        colors: ['#7cd6fd', '#743ee2', '#ff5858', '#ffa3ef', '#5f6fed']
-                    });
-                }, 100);
+                    if (window.frappe && frappe.Chart) {
+                        new frappe.Chart("#" + chart_id, {
+                            title: chart_data.title || "Data visualization",
+                            data: chart_data.data,
+                            type: chart_data.type || 'bar',
+                            height: 250,
+                            colors: ['#7cd6fd', '#743ee2', '#ff5858', '#ffa3ef', '#5f6fed']
+                        });
+                    } else {
+                        console.error("Frappe Chart library not found.");
+                        $chart_container.html("<p class='text-muted'>Chart rendering failed: Library not found.</p>");
+                    }
+                }, 300);
 
-                last_index = chart_regex.lastIndex;
             } catch (e) {
-                console.error("Failed to parse chart data", e);
+                console.error("AI Chat Chart Error:", e, match[1]);
+                $target.append(`<div class="alert alert-warning">Failed to render chart: ${e.message}</div>`);
             }
+            last_index = chart_regex.lastIndex;
         }
 
-        $target.append(frappe.markdown(text.substring(last_index)));
+        // Append remaining text
+        if (last_index < text.length) {
+            $target.append(frappe.markdown(text.substring(last_index)));
+        }
     }
 
     start_voice() {

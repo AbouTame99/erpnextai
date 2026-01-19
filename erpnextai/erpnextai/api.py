@@ -25,18 +25,29 @@ def get_chat_response(query, history=None):
 	actual_model = model_map.get(model_name, "gemini-2.0-flash")
 	genai.configure(api_key=api_key)
 
-	# Implement tools
-	tools = [get_doc_count, get_doc_list, get_monthly_stats, get_total_sum]
+	# Massive Tool Library
+	tools = [
+		get_doc_count, get_doc_list, get_monthly_stats, get_total_sum,
+		get_stock_balance, get_item_details, get_customer_balance, 
+		get_supplier_details, get_project_status, get_open_tasks,
+		get_account_balance, get_lead_stats, get_recent_logs
+	]
 	
 	system_instruction = """
-	You are a highly capable ERPNext AI Data Analyst. 
-	Your primary goal is to provide accurate information based ONLY on live data from the system.
+	You are the ULTIMATE ERPNext AI Data Scientist.
+	You have access to a massive library of tools to query every part of the system.
+	
+	CORE CAPABILITIES:
+	1. **Stock**: Check balances and item info.
+	2. **CRM**: Analyze Leads and Customers.
+	3. **Accounting**: Check account balances and sales totals.
+	4. **Projects**: Track tasks and project health.
 	
 	CRITICAL RULES:
-	1. ALWAYS use a tool to fetch data before answering questions about counts, totals, or lists. 
-	2. NEVER hallucinate or guess numbers. If a tool returns no data, say you don't find any records.
-	3. If asked for the 'best buyer' or 'top customer', use `get_total_sum` with doctype='Sales Invoice', sum_field='base_grand_total', and group_by='customer'.
-	4. For charts, wrap the JSON in exactly <chart>{...}</chart>.
+	- If a user asks for 'stats', 'analytics', or 'trends', use `get_monthly_stats` or `get_total_sum` and ALWAYS show a <chart>.
+	- NEVER guess data. If you don't know, use a tool.
+	- For charts, use "bar", "line", "pie", or "donut" types.
+	- Wrap chart JSON in: <chart>{...}</chart>
 	"""
 	
 	model = genai.GenerativeModel(
@@ -82,7 +93,6 @@ def get_monthly_stats(doctype: str):
 
 def get_total_sum(doctype: str, sum_field: str, group_by: str):
 	"""Calculates the sum of a field grouped by another field. 
-	Use this for 'best customer', 'top selling items', 'total sales', etc.
 	Example: doctype='Sales Invoice', sum_field='base_grand_total', group_by='customer'"""
 	data = frappe.db.sql(f"""
 		SELECT `{group_by}` as label, SUM(`{sum_field}`) as value
@@ -93,3 +103,49 @@ def get_total_sum(doctype: str, sum_field: str, group_by: str):
 		LIMIT 10
 	""", as_dict=1)
 	return data
+
+def get_stock_balance(item_code: str, warehouse: str = None):
+	"""Returns the current stock balance for an item."""
+	filters = {"item_code": item_code}
+	if warehouse:
+		filters["warehouse"] = warehouse
+	return frappe.db.get_value("Bin", filters, ["actual_qty", "ordered_qty", "reserved_qty"], as_dict=1)
+
+def get_item_details(item_code: str):
+	"""Returns details like price, description, and group for an item."""
+	return frappe.get_doc("Item", item_code).as_dict()
+
+def get_customer_balance(customer: str):
+	"""Returns the outstanding balance for a customer."""
+	return frappe.db.get_value("Customer", customer, "outstanding_amount")
+
+def get_supplier_details(supplier: str):
+	"""Returns details for a supplier."""
+	return frappe.get_doc("Supplier", supplier).as_dict()
+
+def get_project_status(project: str):
+	"""Returns the completion percentage and status of a project."""
+	return frappe.db.get_value("Project", project, ["status", "percent_complete", "expected_end_date"], as_dict=1)
+
+def get_open_tasks(project: str = None):
+	"""Returns a list of open tasks, optionally filtered by project."""
+	filters = {"status": ["not in", ["Completed", "Cancelled"]]}
+	if project:
+		filters["project"] = project
+	return frappe.get_list("Task", filters=filters, fields=["subject", "status", "priority", "exp_end_date"])
+
+def get_account_balance(account: str):
+	"""Returns the current balance of a GL Account."""
+	return frappe.db.get_value("Account", account, "balance")
+
+def get_lead_stats():
+	"""Returns lead counts grouped by status for a conversion funnel."""
+	return frappe.db.sql("""
+		SELECT status as label, COUNT(*) as value
+		FROM `tabLead`
+		GROUP BY status
+	""", as_dict=1)
+
+def get_recent_logs(doctype: str, limit: int = 5):
+	"""Returns the most recent activity logs for a specific DocType."""
+	return frappe.get_list("Activity Log", filters={"reference_doctype": doctype}, limit=limit, order_by="creation desc")

@@ -1,56 +1,30 @@
-# ERPNextAI Tool Documentation
+# ERPNextAI Massive Tool Library
 
-This document describes the internal tools (Python functions) that the AI assistant uses to interact with your ERPNext data. These tools are defined in `erpnextai/api.py`.
+The AI assistant now has a "Big Library" of tools categorized by module.
 
-## 🛠️ Performance & Security
-All tools are called internally by the Gemini AI. They do not have `@frappe.whitelist()` to ensure they can only be triggered by the authenticated AI session, preventing external misuse.
+## � Stock & Items
+- **`get_stock_balance`**: Check current quantity in any warehouse.
+- **`get_item_details`**: Get price, group, and full description of any item.
 
----
+## 🤝 CRM & Sales
+- **`get_customer_balance`**: Check how much a customer owes you.
+- **`get_lead_stats`**: View lead funnel (Lead counts by status).
+- **`get_total_sum`**: Rank best customers or top items (e.g., "Best buyer").
+- **`get_doc_list`**: List recent Sales Orders, Quotations, or Leads.
 
-### 1. `get_doc_count`
-Returns the total number of records for a specific DocType.
+## 💰 Accounting
+- **`get_account_balance`**: Check the balance of any Chart of Accounts entry.
+- **`get_monthly_stats`**: Analyze revenue growth month-over-month.
 
-*   **Parameters:**
-    *   `doctype` (str): The name of the ERPNext DocType (e.g., "Customer", "Item", "Sales Invoice").
-*   **AI Goal:** Used when the user asks "How many...?"
-*   **Example Prompt:** "How many active leads do I have?"
+## 🏗️ Projects & Tasks
+- **`get_project_status`**: Check completion % and end dates for projects.
+- **`get_open_tasks`**: List high-priority tasks that are still open.
 
----
-
-### 2. `get_doc_list`
-Fetches a list of records with optional filtering and field selection.
-
-*   **Parameters:**
-    *   `doctype` (str): The name of the DocType.
-    *   `filters` (dict, optional): Conditions to filter data (e.g., `{"status": "Open"}`).
-    *   `fields` (list, optional): Specific columns to fetch (defaults to `["name"]`).
-    *   `limit` (int, optional): Maximum records to return (default: 10).
-*   **AI Goal:** Used when the user asks "Show me...", "List my...", or "Who are the...?"
-*   **Example Prompt:** "Show me the last 5 customers added."
+## 🛠️ System & Activity
+- **`get_doc_count`**: Count any record type in the system.
+- **`get_recent_logs`**: See the latest activity logs for audit trails.
 
 ---
 
-### 3. `get_monthly_stats`
-Calculates growth trends by counting records created per month for the last year.
-
-*   **Parameters:**
-    *   `doctype` (str): The name of the DocType.
-*   **AI Goal:** Used for trend analysis and growth questions.
-*   **Example Prompt:** "Show me a growth chart for new Customers over the last 12 months."
-
----
-
-### 4. `get_total_sum`
-Calculates financial totals or volume totals grouped by a specific field. It only considers 'Submitted' (docstatus=1) documents for accuracy.
-
-*   **Parameters:**
-    *   `doctype` (str): The name of the DocType (e.g., "Sales Invoice").
-    *   `sum_field` (str): The numeric field to sum (e.g., "base_grand_total").
-    *   `group_by` (str): The field to group results by (e.g., "customer" or "item_code").
-*   **AI Goal:** Used for ranking and performance analysis.
-*   **Example Prompt:** "Who is my best buyer?" or "Which item has the highest sales total?"
-
----
-
-## 📈 Data Visualization
-When the AI uses these tools and determines that a visual representation is best, it wraps the resulting data in a `<chart>` tag, which the frontend rendered as an interactive **Frappe Chart**.
+### Visualization
+Whenever the AI provides "Analytics", "Funnel", or "Growth" data, it will generate an interactive **Bar, Line, Pie, or Donut Chart** automatically.
