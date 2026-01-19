@@ -39,7 +39,11 @@ def get_chat_response(query, history=None):
 	4. For charts, wrap the JSON in exactly <chart>{...}</chart>.
 	"""
 	
-	model = genai.GenerativeModel(actual_model, system_instruction=system_instruction, tools=tools)
+	model = genai.GenerativeModel(
+		model_name=actual_model,
+		system_instruction=system_instruction,
+		tools=tools
+	)
 	chat = model.start_chat(enable_automatic_function_calling=True)
 	
 	# Safety settings to prevent finish_reason: 12
@@ -57,18 +61,15 @@ def get_chat_response(query, history=None):
 		frappe.log_error(frappe.get_traceback(), _("AI Chat Error"))
 		return _("Sorry, I encountered an error: {0}").format(str(e))
 
-@frappe.whitelist()
-def get_doc_count(doctype):
+def get_doc_count(doctype: str):
 	"""Returns the count of documents for a given DocType."""
 	return frappe.db.count(doctype)
 
-@frappe.whitelist()
-def get_doc_list(doctype, filters=None, fields=None, limit=10):
+def get_doc_list(doctype: str, filters: dict = None, fields: list = None, limit: int = 10):
 	"""Returns a list of documents for a given DocType with filters."""
 	return frappe.get_list(doctype, filters=filters, fields=fields or ["name"], limit=limit)
 
-@frappe.whitelist()
-def get_monthly_stats(doctype):
+def get_monthly_stats(doctype: str):
 	"""Returns counts per month for the last 12 months for a DocType."""
 	data = frappe.db.sql(f"""
 		SELECT MONTHNAME(creation) as label, COUNT(*) as value
@@ -79,8 +80,7 @@ def get_monthly_stats(doctype):
 	""", as_dict=1)
 	return data
 
-@frappe.whitelist()
-def get_total_sum(doctype, sum_field, group_by):
+def get_total_sum(doctype: str, sum_field: str, group_by: str):
 	"""Calculates the sum of a field grouped by another field. 
 	Use this for 'best customer', 'top selling items', 'total sales', etc.
 	Example: doctype='Sales Invoice', sum_field='base_grand_total', group_by='customer'"""
