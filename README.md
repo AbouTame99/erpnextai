@@ -4,12 +4,13 @@ AI for ERPNext that allows you to talk with your data and automate insights usin
 
 ## Features
 
-- 💬 **AI Chat Interface**: A dedicated page to query your ERPNext data using natural language.
+- 💬 **Premium AI Chat Interface**: A modern glassmorphism UI to query your ERPNext data.
+- 📊 **Interactive Charts**: The AI can now generate Bar, Line, and Pie charts using Frappe Charts.
 - 🎙️ **Voice-to-Action**: speak directly to the AI to get answers or perform tasks.
 - ⚙️ **Gemini Integration**: Support for Gemini 2.0, 2.5, and 3.0 (Pro & Flash) models.
 - 📑 **Contextual Sidebars**: AI-powered summaries and analysis directly on Lead and Sales Invoice documents.
-- 📊 **Daily AI Insights**: Automated business summaries sent to your inbox every day.
-- 🛠️ **Tool-Use (Function Calling)**: The AI can query live counts and record lists from your database.
+- 📉 **Advanced Analytics**: Dedicated tools for monthly trends and data comparisons.
+- 🛠️ **Tool-Use (Function Calling)**: The AI can query live counts, sum totals, and record lists.
 
 ## Installation
 

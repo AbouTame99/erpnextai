@@ -12,13 +12,14 @@ Configure your AI integration in one place.
   - Select your preferred model: **Gemini 2.0, 2.5, or 3.0 (Pro/Flash)**.
   - Toggle features: Contextual Sidebars, Voice Interaction, and Scheduled Insights.
 
-### 2. AI Chat
-A dedicated chat interface to talk to your ERPNext data.
-- **Path:** Search for "AI Chat" or navigate to the `/ai-chat` page.
-- **Capabilities:**
-  - **Tool-Use:** The AI can query your system for document counts and list records.
-  - **Voice-to-Action:** Use the microphone button to speak your queries.
-  - **Live Data:** Ask things like "How many customers are in the system?" or "Show me the last 5 Sales Invoices."
+### 2. Premium AI Chat & Analytics
+A state-of-the-art interactive space with data visualization.
+- **Path**: Search for "AI Chat" or navigate to the `/ai-chat` page.
+- **Capabilities**:
+  - **Interactive Charts**: Ask "Show me a chart of Sales Invoices for the last 6 months" or "Visualize Customer totals".
+  - **Tool-Use**: The AI can now sum totals, group data, and show trends over time.
+  - **Voice-to-Action**: Use the microphone button to speak your analytics queries.
+  - **Premium UI**: Modern glassmorphism design with responsive tables and charts.
 
 ### 3. Contextual Sidebars
 AI analysis right where you need it.
