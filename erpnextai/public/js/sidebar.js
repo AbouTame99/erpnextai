@@ -2,7 +2,7 @@ frappe.ui.form.on('Lead', {
     refresh: function (frm) {
         frm.add_custom_button(__('AI Summary'), function () {
             frappe.call({
-                method: 'erpnextai.erpnextai.api.get_chat_response',
+                method: 'erpnextai.api.get_chat_response',
                 args: {
                     query: `Summarize this Lead: ${JSON.stringify(frm.doc)}`
                 },
@@ -24,7 +24,7 @@ frappe.ui.form.on('Sales Invoice', {
     refresh: function (frm) {
         frm.add_custom_button(__('AI Analysis'), function () {
             frappe.call({
-                method: 'erpnextai.erpnextai.api.get_chat_response',
+                method: 'erpnextai.api.get_chat_response',
                 args: {
                     query: `Analyze this Sales Invoice and tell me if it looks normal: ${JSON.stringify(frm.doc)}`
                 },

@@ -1,5 +1,5 @@
 import frappe
-from erpnextai.erpnextai.api import get_chat_response
+from erpnextai.api import get_chat_response
 
 def daily_insights():
 	"""Generates daily business insights and notifies system managers."""

@@ -153,7 +153,7 @@ doctype_js = {
 
 scheduler_events = {
 	"daily": [
-		"erpnextai.erpnextai.tasks.daily_insights"
+		"erpnextai.tasks.daily_insights"
 	],
 }
 
