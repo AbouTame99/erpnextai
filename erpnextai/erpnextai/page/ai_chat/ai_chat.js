@@ -13,6 +13,7 @@ erpnextai.AIChat = class {
         this.page = page;
         this.prepare_layout();
         this.setup_events();
+        this.history = [];
     }
 
     prepare_layout() {
