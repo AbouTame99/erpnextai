@@ -2,71 +2,7 @@ import frappe
 import google.generativeai as genai
 from frappe import _
 
-@frappe.whitelist()
-def get_chat_response(query, history=None):
-	settings = frappe.get_single("AI Settings")
-	api_key = settings.get_password("gemini_api_key")
-	
-	if not api_key:
-		frappe.throw(_("Please set Gemini API Key in AI Settings"))
-
-	model_name = settings.selected_model or "Gemini 2.0 Flash"
-	
-	# Map user visible model to AI model name
-	model_map = {
-		"Gemini 2.0 Flash": "gemini-2.0-flash",
-		"Gemini 2.0 Pro": "gemini-2.0-pro",
-		"Gemini 2.5 Flash": "gemini-2.5-flash",
-		"Gemini 2.5 Pro": "gemini-2.5-pro",
-		"Gemini 3.0 Flash": "gemini-3.0-flash",
-		"Gemini 3.0 Pro": "gemini-3.0-pro",
-	}
-	
-	actual_model = model_map.get(model_name, "gemini-2.0-flash")
-	genai.configure(api_key=api_key)
-
-	# Massive Tool Library
-	tools = [
-		get_doc_count, get_doc_list, get_monthly_stats, get_total_sum,
-		get_stock_balance, get_item_details, get_customer_balance, 
-		get_supplier_details, get_project_status, get_open_tasks,
-		get_account_balance, get_lead_stats, get_recent_logs
-	]
-	
-	system_instruction = """
-	You are the ULTIMATE ERPNext AI Data Scientist.
-	
-	TOKEN SAVING RULES:
-	- Be concise. 
-	- If a tool returns a lot of data, summarize it.
-	
-	CHART RULES:
-	- When you have numeric data for a chart, ALWAYS wrap it in a `<chart_data>` tag first.
-	- The UI will then ask the user to select the chart type (Bar/Line/etc).
-	- Example: <chart_data>{"title": "Sales", "data": {...}}</chart_data>
-	"""
-	
-	model = genai.GenerativeModel(
-		model_name=actual_model,
-		system_instruction=system_instruction,
-		tools=tools
-	)
-	chat = model.start_chat(enable_automatic_function_calling=True)
-	
-	# Safety settings to prevent finish_reason: 12
-	safety_settings = [
-		{"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-		{"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-		{"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-		{"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-	]
-	
-	try:
-		response = chat.send_message(query, safety_settings=safety_settings)
-		return response.text
-	except Exception as e:
-		frappe.log_error(frappe.get_traceback(), _("AI Chat Error"))
-		return _("Sorry, I encountered an error: {0}").format(str(e))
+# --- TOOL DEFINITIONS (At the top to prevent NameErrors) ---
 
 def get_doc_count(doctype: str):
 	"""Returns the count of documents for a given DocType."""
@@ -147,3 +83,87 @@ def get_lead_stats():
 def get_recent_logs(doctype: str, limit: int = 10):
 	"""Returns the most recent activity logs for a specific DocType."""
 	return frappe.get_list("Activity Log", filters={"reference_doctype": doctype}, limit=limit, order_by="creation desc")
+
+def get_rfm_stats(customer: str):
+	"""Provides Recency, Frequency, and Monetary (RFM) analytics for a customer.
+	Includes: days since last purchase, total number of orders, and total spent."""
+	stats = frappe.db.sql(f"""
+		SELECT 
+			DATEDIFF(CURDATE(), MAX(posting_date)) as recency_days,
+			COUNT(name) as frequency,
+			SUM(base_grand_total) as monetary
+		FROM `tabSales Invoice`
+		WHERE customer = %s AND docstatus = 1
+	""", (customer), as_dict=1)
+	return stats[0] if stats else None
+
+# --- MAIN API HANDLER ---
+
+@frappe.whitelist()
+def get_chat_response(query, history=None):
+	settings = frappe.get_single("AI Settings")
+	api_key = settings.get_password("gemini_api_key")
+	
+	if not api_key:
+		frappe.throw(_("Please set Gemini API Key in AI Settings"))
+
+	model_name = settings.selected_model or "Gemini 2.0 Flash"
+	
+	# Map user visible model to AI model name
+	model_map = {
+		"Gemini 2.0 Flash": "gemini-2.0-flash",
+		"Gemini 2.0 Pro": "gemini-2.0-pro",
+		"Gemini 2.5 Flash": "gemini-2.5-flash",
+		"Gemini 2.5 Pro": "gemini-2.5-pro",
+		"Gemini 3.0 Flash": "gemini-3.0-flash",
+		"Gemini 3.0 Pro": "gemini-3.0-pro",
+	}
+	
+	actual_model = model_map.get(model_name, "gemini-2.0-flash")
+	genai.configure(api_key=api_key)
+
+	# Massive Tool Library
+	tools = [
+		get_doc_count, get_doc_list, get_monthly_stats, get_total_sum,
+		get_stock_balance, get_item_details, get_customer_balance, 
+		get_supplier_details, get_project_status, get_open_tasks,
+		get_account_balance, get_lead_stats, get_recent_logs, get_rfm_stats
+	]
+	
+	system_instruction = """
+	You are the ULTIMATE ERPNext AI Data Scientist.
+	
+	TOKEN SAVING RULES:
+	- Be concise. 
+	- If a tool returns a lot of data, summarize it.
+	
+	CHART RULES:
+	- When you have numeric data for a chart, ALWAYS wrap it in a `<chart_data>` tag first.
+	- The UI will then ask the user to select the chart type (Bar/Line/etc).
+	- Example: <chart_data>{"title": "Sales", "data": {...}}</chart_data>
+	
+	ANALYTICS:
+	- If asked for "RFM" or "loyalty" or "buying habits" of a customer, use `get_rfm_stats`.
+	"""
+	
+	model = genai.GenerativeModel(
+		model_name=actual_model,
+		system_instruction=system_instruction,
+		tools=tools
+	)
+	chat = model.start_chat(enable_automatic_function_calling=True)
+	
+	# Safety settings to prevent finish_reason: 12
+	safety_settings = [
+		{"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+		{"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+		{"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+		{"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+	]
+	
+	try:
+		response = chat.send_message(query, safety_settings=safety_settings)
+		return response.text
+	except Exception as e:
+		frappe.log_error(frappe.get_traceback(), _("AI Chat Error"))
+		return _("Sorry, I encountered an error: {0}").format(str(e))
