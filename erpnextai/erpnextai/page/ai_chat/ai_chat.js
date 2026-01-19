@@ -180,7 +180,14 @@ erpnextai.AIChat = class {
             }
 
             try {
-                let chart_json = match[1].trim();
+                let raw_tag_content = match[1].trim();
+
+                // CRITICAL FIX: Extract ONLY the JSON part (from first { to last })
+                // This prevents "Unexpected character" errors if the AI adds text inside the tags
+                let json_match = raw_tag_content.match(/\{[\s\S]*\}/);
+                if (!json_match) throw new Error("No valid JSON object found inside tags");
+
+                let chart_json = json_match[0];
                 let chart_data = JSON.parse(chart_json);
 
                 let $selector = $(`

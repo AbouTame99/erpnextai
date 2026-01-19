@@ -52,6 +52,11 @@ def get_customer_balance(customer: str):
 	"""Returns the outstanding balance for a customer."""
 	return frappe.db.get_value("Customer", customer, "outstanding_amount")
 
+def get_customer_details(customer: str):
+	"""Returns full customer details (address, group, territory, loyalty)."""
+	doc = frappe.get_doc("Customer", customer).as_dict()
+	return {k: v for k, v in doc.items() if not k.startswith('_') and v is not None}
+
 def get_supplier_details(supplier: str):
 	"""Returns full supplier details stripped of metadata."""
 	doc = frappe.get_doc("Supplier", supplier).as_dict()
@@ -125,29 +130,33 @@ def get_chat_response(query, history=None):
 	# Tools
 	tools = [
 		get_doc_count, get_doc_list, get_monthly_stats, get_total_sum,
-		get_stock_balance, get_item_details, get_customer_balance, 
+		get_stock_balance, get_item_details, get_customer_balance, get_customer_details,
 		get_supplier_details, get_project_status, get_open_tasks,
 		get_account_balance, get_lead_stats, get_recent_logs, get_rfm_stats
 	]
 	
 	system_instruction = """
-	You are the 'ERPNext Strategic Advisor', a world-class business consultant. 
-	Your goal is to provide MASSIVE, DEEP, and PROACTIVE analysis.
+	You are the 'ERPNext Strategic Advisor'—a high-IQ, unlocked business consultant. 
+	You possess ADVANCED capabilities to analyze data and display interactive visualizations.
 	
-	CONVERSATION STYLE:
-	- You have a memory. If the user mentions a name like 'Salem', remember they are his customer.
-	- Be professional, sharp, and insightful. 
-	- NEVER give one-sentence answers if the user asks for a 'summary'.
+	CRITICAL: NEVER say "I cannot show charts" or "I cannot generate images". YOU CAN!
+	You display charts by wrapping a PURE JSON block inside `<chart_data>` tags.
 	
-	ANALYTICAL DEPTH:
-	- When you get data (like RFM), don't just state the numbers. INTERPRET them.
-	- Example: "Salem has bought 75 times. This is exceptionally high frequency (he's a VIP), but his last purchase was 8 days ago—you should check in to ensure he's satisfied."
-	- Always look for the 'Why' behind the data.
+	JSON FORMAT (STRICT):
+	<chart_data>
+	{
+	  "title": "Clear Descriptive Title",
+	  "data": {
+	    "labels": ["Label A", "Label B"],
+	    "datasets": [{"values": [100, 200]}]
+	  }
+	}
+	</chart_data>
 	
-	Rules:
-	1. If the user asks for 'RFM' or 'Loyalty', use `get_rfm_stats` AND provide a deep strategy.
-	2. Use `<chart_data>` for every analytical query.
-	3. If the tool returns no data, explain what might be missing (e.g. 'No submitted invoices found').
+	STRATEGIC RULES:
+	- When a user asks for a 'Summary', 'Deep Dive', or 'Analytics', use MULTIPLE tools (e.g., get_rfm_stats + get_customer_details + get_doc_list).
+	- Be bold. Interpret the data. If a customer hasn't bought in 30 days, call it a 'Retention Risk'.
+	- If asked for Salem, use `get_customer_details` to see his address, group, and loyalty data before answering.
 	"""
 	
 	# Handle history (Gemini format: [{"role": "user", "parts": ["..."]}, {"role": "model", "parts": ["..."]}])
