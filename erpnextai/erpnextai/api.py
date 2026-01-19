@@ -46,8 +46,16 @@ def get_chat_response(query, history=None):
 	model = genai.GenerativeModel(actual_model, system_instruction=system_instruction)
 	chat = model.start_chat(enable_automatic_function_calling=True)
 	
+	# Safety settings to prevent finish_reason: 12
+	safety_settings = [
+		{"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+		{"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+		{"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+		{"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+	]
+	
 	try:
-		response = chat.send_message(query)
+		response = chat.send_message(query, safety_settings=safety_settings)
 		return response.text
 	except Exception as e:
 		frappe.log_error(frappe.get_traceback(), _("AI Chat Error"))

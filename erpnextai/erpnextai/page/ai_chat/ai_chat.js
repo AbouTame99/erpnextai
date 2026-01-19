@@ -61,6 +61,16 @@ erpnextai.AIChat = class {
 				.ai-msg th, .ai-msg td { padding: 10px; border: 1px solid #eee; text-align: left; }
 				.ai-msg th { background: #f8f9fa; font-weight: 600; }
 				.chart-container { background: #fff; border-radius: 12px; padding: 15px; margin: 10px 0; border: 1px solid #eee; }
+				
+				.typing { display: flex; gap: 4px; align-items: center; padding: 10px 0; }
+				.typing span { width: 8px; height: 8px; background: #6c757d; border-radius: 50%; animation: blink 1.4s infinite both; }
+				.typing span:nth-child(2) { animation-delay: 0.2s; }
+				.typing span:nth-child(3) { animation-delay: 0.4s; }
+				@keyframes blink {
+					0% { opacity: .2; }
+					20% { opacity: 1; }
+					100% { opacity: .2; }
+				}
 			</style>
 		`);
 
@@ -89,11 +99,22 @@ erpnextai.AIChat = class {
         this.add_message(query, 'user');
         this.$input.val('');
 
+        // Add typing indicator
+        let $typing = $(`
+			<div class="message ai-msg typing-indicator">
+				<div class="msg-content" style="background: #fff; padding: 12px 18px; border-radius: 0 15px 15px 15px; width: fit-content;">
+					<div class="typing"><span></span><span></span><span></span></div>
+				</div>
+			</div>
+		`);
+        this.$messages.append($typing);
+        this.$messages.scrollTop(this.$messages[0].scrollHeight);
+
         frappe.call({
             method: 'erpnextai.erpnextai.api.get_chat_response',
             args: { query: query },
-            freeze: true,
             callback: (r) => {
+                $typing.remove();
                 if (r.message) {
                     this.add_message(r.message, 'ai');
                 }
