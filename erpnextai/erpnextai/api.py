@@ -109,7 +109,7 @@ def get_chat_response(query, history=None):
 
 	model_name = settings.selected_model or "Gemini 2.0 Flash"
 	
-	# Map user visible model to AI model name
+	# Map models
 	model_map = {
 		"Gemini 2.0 Flash": "gemini-2.0-flash",
 		"Gemini 2.0 Pro": "gemini-2.0-pro",
@@ -122,7 +122,7 @@ def get_chat_response(query, history=None):
 	actual_model = model_map.get(model_name, "gemini-2.0-flash")
 	genai.configure(api_key=api_key)
 
-	# Massive Tool Library
+	# Tools
 	tools = [
 		get_doc_count, get_doc_list, get_monthly_stats, get_total_sum,
 		get_stock_balance, get_item_details, get_customer_balance, 
@@ -131,27 +131,47 @@ def get_chat_response(query, history=None):
 	]
 	
 	system_instruction = """
-	You are the ULTIMATE ERPNext AI Data Scientist.
+	You are the 'ERPNext Strategic Advisor', a world-class business consultant. 
+	Your goal is to provide MASSIVE, DEEP, and PROACTIVE analysis.
 	
-	TOKEN SAVING RULES:
-	- Be concise. 
-	- If a tool returns a lot of data, summarize it.
+	CONVERSATION STYLE:
+	- You have a memory. If the user mentions a name like 'Salem', remember they are his customer.
+	- Be professional, sharp, and insightful. 
+	- NEVER give one-sentence answers if the user asks for a 'summary'.
 	
-	CHART RULES:
-	- When you have numeric data for a chart, ALWAYS wrap it in a `<chart_data>` tag first.
-	- The UI will then ask the user to select the chart type (Bar/Line/etc).
-	- Example: <chart_data>{"title": "Sales", "data": {...}}</chart_data>
+	ANALYTICAL DEPTH:
+	- When you get data (like RFM), don't just state the numbers. INTERPRET them.
+	- Example: "Salem has bought 75 times. This is exceptionally high frequency (he's a VIP), but his last purchase was 8 days ago—you should check in to ensure he's satisfied."
+	- Always look for the 'Why' behind the data.
 	
-	ANALYTICS:
-	- If asked for "RFM" or "loyalty" or "buying habits" of a customer, use `get_rfm_stats`.
+	Rules:
+	1. If the user asks for 'RFM' or 'Loyalty', use `get_rfm_stats` AND provide a deep strategy.
+	2. Use `<chart_data>` for every analytical query.
+	3. If the tool returns no data, explain what might be missing (e.g. 'No submitted invoices found').
 	"""
 	
+	# Handle history (Gemini format: [{"role": "user", "parts": ["..."]}, {"role": "model", "parts": ["..."]}])
+	formatted_history = []
+	if history:
+		import json
+		try:
+			history_list = json.loads(history) if isinstance(history, str) else history
+			for msg in history_list:
+				formatted_history.append({
+					"role": "user" if msg["role"] == "user" else "model",
+					"parts": [msg["content"]]
+				})
+		except:
+			pass
+
 	model = genai.GenerativeModel(
 		model_name=actual_model,
 		system_instruction=system_instruction,
 		tools=tools
 	)
-	chat = model.start_chat(enable_automatic_function_calling=True)
+	
+	# Start chat with REAL history
+	chat = model.start_chat(history=formatted_history, enable_automatic_function_calling=True)
 	
 	# Safety settings to prevent finish_reason: 12
 	safety_settings = [

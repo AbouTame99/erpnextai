@@ -119,11 +119,31 @@ erpnextai.AIChat = class {
 
         frappe.call({
             method: 'erpnextai.erpnextai.api.get_chat_response',
-            args: { query: query },
+            args: {
+                query: query,
+                history: JSON.stringify(this.history)
+            },
             callback: (r) => {
                 $typing.remove();
                 if (r.message) {
+                    // Add to local history for context
+                    this.history.push({ role: 'user', content: query });
+                    this.history.push({ role: 'ai', content: r.message });
+
+                    // Keep history manageable (last 10 messages)
+                    if (this.history.length > 20) {
+                        this.history = this.history.slice(-20);
+                    }
+
                     this.add_message(r.message, 'ai');
+                }
+            },
+            error: (err) => {
+                $typing.remove();
+                if (err.message && err.message.includes('429')) {
+                    this.add_message("⚠️ **Gemini API Limit reached.** You are on the Free Tier which allows 5 messages per minute. Please wait 30 seconds and try again.", 'ai');
+                } else {
+                    this.add_message("❌ " + (err.message || "An unexpected error occurred."), 'ai');
                 }
             }
         });
