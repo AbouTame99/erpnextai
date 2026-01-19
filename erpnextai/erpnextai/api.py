@@ -35,19 +35,15 @@ def get_chat_response(query, history=None):
 	
 	system_instruction = """
 	You are the ULTIMATE ERPNext AI Data Scientist.
-	You have access to a massive library of tools to query every part of the system.
 	
-	CORE CAPABILITIES:
-	1. **Stock**: Check balances and item info.
-	2. **CRM**: Analyze Leads and Customers.
-	3. **Accounting**: Check account balances and sales totals.
-	4. **Projects**: Track tasks and project health.
+	TOKEN SAVING RULES:
+	- Be concise. 
+	- If a tool returns a lot of data, summarize it.
 	
-	CRITICAL RULES:
-	- If a user asks for 'stats', 'analytics', or 'trends', use `get_monthly_stats` or `get_total_sum` and ALWAYS show a <chart>.
-	- NEVER guess data. If you don't know, use a tool.
-	- For charts, use "bar", "line", "pie", or "donut" types.
-	- Wrap chart JSON in: <chart>{...}</chart>
+	CHART RULES:
+	- When you have numeric data for a chart, ALWAYS wrap it in a `<chart_data>` tag first.
+	- The UI will then ask the user to select the chart type (Bar/Line/etc).
+	- Example: <chart_data>{"title": "Sales", "data": {...}}</chart_data>
 	"""
 	
 	model = genai.GenerativeModel(
@@ -76,9 +72,9 @@ def get_doc_count(doctype: str):
 	"""Returns the count of documents for a given DocType."""
 	return frappe.db.count(doctype)
 
-def get_doc_list(doctype: str, filters: dict = None, fields: list = None, limit: int = 10):
-	"""Returns a list of documents for a given DocType with filters."""
-	return frappe.get_list(doctype, filters=filters, fields=fields or ["name"], limit=limit)
+def get_doc_list(doctype: str, filters: dict = None, fields: list = None, limit: int = 5):
+	"""Returns a small list of documents to save tokens."""
+	return frappe.get_list(doctype, filters=filters, fields=fields or ["name", "creation"], limit=limit)
 
 def get_monthly_stats(doctype: str):
 	"""Returns counts per month for the last 12 months for a DocType."""
@@ -112,16 +108,16 @@ def get_stock_balance(item_code: str, warehouse: str = None):
 	return frappe.db.get_value("Bin", filters, ["actual_qty", "ordered_qty", "reserved_qty"], as_dict=1)
 
 def get_item_details(item_code: str):
-	"""Returns details like price, description, and group for an item."""
-	return frappe.get_doc("Item", item_code).as_dict()
+	"""Returns only essential item details to save tokens."""
+	return frappe.db.get_value("Item", item_code, ["item_name", "item_group", "stock_uom", "standard_rate", "description"], as_dict=1)
 
 def get_customer_balance(customer: str):
 	"""Returns the outstanding balance for a customer."""
 	return frappe.db.get_value("Customer", customer, "outstanding_amount")
 
 def get_supplier_details(supplier: str):
-	"""Returns details for a supplier."""
-	return frappe.get_doc("Supplier", supplier).as_dict()
+	"""Returns only essential supplier details."""
+	return frappe.db.get_value("Supplier", supplier, ["supplier_name", "supplier_group", "country"], as_dict=1)
 
 def get_project_status(project: str):
 	"""Returns the completion percentage and status of a project."""
