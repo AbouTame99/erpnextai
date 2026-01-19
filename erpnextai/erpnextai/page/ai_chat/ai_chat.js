@@ -45,8 +45,15 @@ erpnextai.AIChat = class {
 			</div>
 
 			<style>
-				.message.user-msg { align-self: flex-end; }
 				.message.ai-msg { align-self: flex-start; }
+				.ai-msg .msg-content {
+					background: #fff; 
+					padding: 15px 20px; 
+					border-radius: 0 15px 15px 15px; 
+					box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+					max-width: 85%;
+					color: #333;
+				}
 				.user-msg .msg-content { 
 					background: var(--blue-600); 
 					color: white; 
