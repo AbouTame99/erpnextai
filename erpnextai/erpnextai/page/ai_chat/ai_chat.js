@@ -64,7 +64,7 @@ erpnextai.AIChat = class {
         this.$input.val('');
 
         frappe.call({
-            method: 'erpnextai.api.get_chat_response',
+            method: 'erpnextai.erpnextai.api.get_chat_response',
             args: {
                 query: query
             },
