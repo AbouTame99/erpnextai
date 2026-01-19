@@ -72,9 +72,9 @@ def get_doc_count(doctype: str):
 	"""Returns the count of documents for a given DocType."""
 	return frappe.db.count(doctype)
 
-def get_doc_list(doctype: str, filters: dict = None, fields: list = None, limit: int = 5):
-	"""Returns a small list of documents to save tokens."""
-	return frappe.get_list(doctype, filters=filters, fields=fields or ["name", "creation"], limit=limit)
+def get_doc_list(doctype: str, filters: dict = None, fields: list = None, limit: int = 10):
+	"""Returns a list of documents. Default 10 records."""
+	return frappe.get_list(doctype, filters=filters, fields=fields or ["name", "creation", "status"], limit=limit)
 
 def get_monthly_stats(doctype: str):
 	"""Returns counts per month for the last 12 months for a DocType."""
@@ -108,16 +108,14 @@ def get_stock_balance(item_code: str, warehouse: str = None):
 	return frappe.db.get_value("Bin", filters, ["actual_qty", "ordered_qty", "reserved_qty"], as_dict=1)
 
 def get_item_details(item_code: str):
-	"""Returns only essential item details to save tokens."""
-	return frappe.db.get_value("Item", item_code, ["item_name", "item_group", "stock_uom", "standard_rate", "description"], as_dict=1)
-
-def get_customer_balance(customer: str):
-	"""Returns the outstanding balance for a customer."""
-	return frappe.db.get_value("Customer", customer, "outstanding_amount")
+	"""Returns full item details but strips useless metadata to save tokens."""
+	doc = frappe.get_doc("Item", item_code).as_dict()
+	return {k: v for k, v in doc.items() if not k.startswith('_') and v is not None}
 
 def get_supplier_details(supplier: str):
-	"""Returns only essential supplier details."""
-	return frappe.db.get_value("Supplier", supplier, ["supplier_name", "supplier_group", "country"], as_dict=1)
+	"""Returns full supplier details stripped of metadata."""
+	doc = frappe.get_doc("Supplier", supplier).as_dict()
+	return {k: v for k, v in doc.items() if not k.startswith('_') and v is not None}
 
 def get_project_status(project: str):
 	"""Returns the completion percentage and status of a project."""
@@ -142,6 +140,6 @@ def get_lead_stats():
 		GROUP BY status
 	""", as_dict=1)
 
-def get_recent_logs(doctype: str, limit: int = 5):
+def get_recent_logs(doctype: str, limit: int = 10):
 	"""Returns the most recent activity logs for a specific DocType."""
 	return frappe.get_list("Activity Log", filters={"reference_doctype": doctype}, limit=limit, order_by="creation desc")

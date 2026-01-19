@@ -148,12 +148,12 @@ erpnextai.AIChat = class {
     }
 
     render_ai_content($target, text) {
-        let chart_regex = /<chart>([\s\S]*?)<\/chart>/g;
+        let data_regex = /<chart_data>([\s\S]*?)<\/chart_data>/g;
         let last_index = 0;
         let match;
 
-        while ((match = chart_regex.exec(text)) !== null) {
-            // Append text before the chart
+        while ((match = data_regex.exec(text)) !== null) {
+            // Append text before the data tag
             if (match.index > last_index) {
                 $target.append(frappe.markdown(text.substring(last_index, match.index)));
             }
@@ -161,36 +161,84 @@ erpnextai.AIChat = class {
             try {
                 let chart_json = match[1].trim();
                 let chart_data = JSON.parse(chart_json);
-                let chart_id = 'chart-' + Math.random().toString(36).substr(2, 9);
 
-                let $chart_container = $(`
-                    <div class="chart-wrapper" style="margin: 20px 0; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; min-height: 300px;">
-                        <div id="${chart_id}"></div>
+                let $selector = $(`
+                    <div class="chart-selector-card" style="margin: 20px 0; background: #fff; padding: 20px; border-radius: 15px; border: 1px solid #d1d8e0; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+                        <h6 style="margin-bottom: 15px; font-weight: 600; color: #4b5563; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa fa-chart-bar" style="color: var(--blue-500);"></i>
+                            Which chart types would you like to see?
+                        </h6>
+                        <div class="chart-types" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                            <button class="btn btn-xs btn-default chart-type-btn" data-type="bar" style="border-radius: 8px; padding: 5px 12px;">Bar Chart</button>
+                            <button class="btn btn-xs btn-default chart-type-btn" data-type="line" style="border-radius: 8px; padding: 5px 12px;">Line Chart</button>
+                            <button class="btn btn-xs btn-default chart-type-btn" data-type="pie" style="border-radius: 8px; padding: 5px 12px;">Pie Chart</button>
+                            <button class="btn btn-xs btn-default chart-type-btn" data-type="donut" style="border-radius: 8px; padding: 5px 12px;">Donut Chart</button>
+                            <button class="btn btn-xs btn-default chart-type-btn" data-type="percentage" style="border-radius: 8px; padding: 5px 12px;">Percentage</button>
+                        </div>
+                        <div class="render-area" style="text-align: right;">
+                            <button class="btn btn-primary btn-sm btn-render-charts" style="display:none; border-radius: 8px; padding: 6px 20px; font-weight: 600;">
+                                Generate Selected <i class="fa fa-magic" style="margin-left:5px;"></i>
+                            </button>
+                        </div>
+                        <div class="chart-outputs" style="margin-top: 20px; display: flex; flex-direction: column; gap: 20px;"></div>
                     </div>
                 `);
-                $target.append($chart_container);
 
-                // Render with a delay to ensure container is in DOM
-                setTimeout(() => {
-                    if (window.frappe && frappe.Chart) {
-                        new frappe.Chart("#" + chart_id, {
-                            title: chart_data.title || "Data visualization",
-                            data: chart_data.data,
-                            type: chart_data.type || 'bar',
-                            height: 250,
-                            colors: ['#7cd6fd', '#743ee2', '#ff5858', '#ffa3ef', '#5f6fed']
-                        });
+                $target.append($selector);
+
+                let selected_types = new Set();
+                $selector.find('.chart-type-btn').on('click', function () {
+                    let type = $(this).data('type');
+                    $(this).toggleClass('btn-primary btn-default');
+
+                    if (selected_types.has(type)) {
+                        selected_types.delete(type);
                     } else {
-                        console.error("Frappe Chart library not found.");
-                        $chart_container.html("<p class='text-muted'>Chart rendering failed: Library not found.</p>");
+                        selected_types.add(type);
                     }
-                }, 300);
+
+                    if (selected_types.size > 0) {
+                        $selector.find('.btn-render-charts').fadeIn(200);
+                    } else {
+                        $selector.find('.btn-render-charts').fadeOut(200);
+                    }
+                });
+
+                $selector.find('.btn-render-charts').on('click', () => {
+                    let $output = $selector.find('.chart-outputs');
+                    $output.empty();
+
+                    selected_types.forEach(type => {
+                        let chart_id = 'chart-' + Math.random().toString(36).substr(2, 9);
+                        $output.append(`
+                            <div class="single-chart-result" style="border: 1px solid #f3f4f6; border-radius: 12px; padding: 15px; background: #fafafa;">
+                                <div id="${chart_id}"></div>
+                            </div>
+                        `);
+
+                        setTimeout(() => {
+                            if (window.frappe && frappe.Chart) {
+                                new frappe.Chart("#" + chart_id, {
+                                    title: (chart_data.title || "Data Insight") + ` (${type.charAt(0).toUpperCase() + type.slice(1)})`,
+                                    data: chart_data.data,
+                                    type: type,
+                                    height: 220,
+                                    colors: ['#7cd6fd', '#743ee2', '#ff5858', '#ffa3ef', '#5f6fed'],
+                                    lineOptions: { hideDots: 1, regionFill: 1 }
+                                });
+                            }
+                        }, 100);
+                    });
+
+                    $selector.find('.render-area').slideUp(200);
+                    $selector.find('.chart-types').css('opacity', '0.4').css('pointer-events', 'none');
+                });
 
             } catch (e) {
-                console.error("AI Chat Chart Error:", e, match[1]);
-                $target.append(`<div class="alert alert-warning">Failed to render chart: ${e.message}</div>`);
+                console.error("Interactive Chart Error:", e);
+                $target.append(`<div class="alert alert-danger">Error processing chart data: ${e.message}</div>`);
             }
-            last_index = chart_regex.lastIndex;
+            last_index = data_regex.lastIndex;
         }
 
         // Append remaining text
