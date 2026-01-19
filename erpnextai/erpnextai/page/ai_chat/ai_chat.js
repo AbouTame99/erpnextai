@@ -158,13 +158,14 @@ erpnextai.AIChat = class {
 			</div>
 		`);
 
+        this.$messages.append($msg);
+
         if (is_ai) {
             this.render_ai_content($msg.find('.msg-content'), text);
         } else {
             $msg.find('.msg-content').text(text);
         }
 
-        this.$messages.append($msg);
         this.$messages.scrollTop(this.$messages[0].scrollHeight);
     }
 
@@ -215,51 +216,66 @@ erpnextai.AIChat = class {
                 $target.append($selector);
 
                 let selected_types = new Set();
-                $selector.find('.chart-type-btn').on('click', function () {
+                $selector.find('.chart-type-btn').on('click', function (e) {
+                    e.preventDefault();
                     let type = $(this).data('type');
-                    $(this).toggleClass('btn-primary btn-default');
 
                     if (selected_types.has(type)) {
                         selected_types.delete(type);
+                        $(this).css({ 'background-color': '#fff', 'color': '#333', 'border-color': '#d1d8e0' });
                     } else {
                         selected_types.add(type);
+                        $(this).css({ 'background-color': '#007bff', 'color': '#fff', 'border-color': '#0056b3' });
                     }
 
+                    console.log("Selected types:", Array.from(selected_types));
+
                     if (selected_types.size > 0) {
-                        $selector.find('.btn-render-charts').fadeIn(200);
+                        $selector.find('.btn-render-charts').show();
                     } else {
-                        $selector.find('.btn-render-charts').fadeOut(200);
+                        $selector.find('.btn-render-charts').hide();
                     }
                 });
 
-                $selector.find('.btn-render-charts').on('click', () => {
+                $selector.find('.btn-render-charts').on('click', (e) => {
+                    e.preventDefault();
                     let $output = $selector.find('.chart-outputs');
                     $output.empty();
+
+                    if (selected_types.size === 0) return;
 
                     selected_types.forEach(type => {
                         let chart_id = 'chart-' + Math.random().toString(36).substr(2, 9);
                         $output.append(`
-                            <div class="single-chart-result" style="border: 1px solid #f3f4f6; border-radius: 12px; padding: 15px; background: #fafafa;">
-                                <div id="${chart_id}"></div>
+                            <div class="single-chart-result" style="border: 1px solid #f3f4f6; border-radius: 12px; padding: 15px; background: #fafafa; margin-bottom: 10px;">
+                                <div id="${chart_id}" style="min-height: 200px;"></div>
                             </div>
                         `);
 
                         setTimeout(() => {
                             if (window.frappe && frappe.Chart) {
-                                new frappe.Chart("#" + chart_id, {
-                                    title: (chart_data.title || "Data Insight") + ` (${type.charAt(0).toUpperCase() + type.slice(1)})`,
-                                    data: chart_data.data,
-                                    type: type,
-                                    height: 220,
-                                    colors: ['#7cd6fd', '#743ee2', '#ff5858', '#ffa3ef', '#5f6fed'],
-                                    lineOptions: { hideDots: 1, regionFill: 1 }
-                                });
+                                try {
+                                    new frappe.Chart("#" + chart_id, {
+                                        title: (chart_data.title || "Data Insight") + ` (${type.charAt(0).toUpperCase() + type.slice(1)})`,
+                                        data: chart_data.data,
+                                        type: type === 'percentage' ? 'pie' : type,
+                                        height: 200,
+                                        colors: ['#7cd6fd', '#743ee2', '#ff5858', '#ffa3ef', '#5f6fed'],
+                                        lineOptions: { hideDots: 1, regionFill: 1 },
+                                        isNavigable: 1
+                                    });
+                                } catch (err) {
+                                    console.error("Frappe Chart Init Error:", err);
+                                    $(`#${chart_id}`).html(`<div class="text-danger">Chart Initialization Error: ${err.message}</div>`);
+                                }
+                            } else {
+                                $(`#${chart_id}`).html(`<div class="text-danger">Frappe Chart Library not found.</div>`);
                             }
-                        }, 100);
+                        }, 200);
                     });
 
-                    $selector.find('.render-area').slideUp(200);
-                    $selector.find('.chart-types').css('opacity', '0.4').css('pointer-events', 'none');
+                    $selector.find('.render-area').hide();
+                    $selector.find('.chart-types').css({ 'opacity': '0.5', 'pointer-events': 'none' });
                 });
 
             } catch (e) {
