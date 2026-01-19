@@ -11,6 +11,20 @@ def get_chat_response(query, history=None):
 		frappe.throw(_("Please set Gemini API Key in AI Settings"))
 
 	model_name = settings.selected_model or "Gemini 2.0 Flash"
+	
+	# Map user visible model to AI model name
+	model_map = {
+		"Gemini 2.0 Flash": "gemini-2.0-flash",
+		"Gemini 2.0 Pro": "gemini-2.0-pro",
+		"Gemini 2.5 Flash": "gemini-2.5-flash",
+		"Gemini 2.5 Pro": "gemini-2.5-pro",
+		"Gemini 3.0 Flash": "gemini-3.0-flash",
+		"Gemini 3.0 Pro": "gemini-3.0-pro",
+	}
+	
+	actual_model = model_map.get(model_name, "gemini-2.0-flash")
+	genai.configure(api_key=api_key)
+
 	# Implement tools
 	tools = [get_doc_count, get_doc_list, get_monthly_stats, get_total_sum]
 	
