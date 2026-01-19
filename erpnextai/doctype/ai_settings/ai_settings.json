@@ -1,0 +1,69 @@
+{
+    "actions": [],
+    "allow_rename": 1,
+    "creation": "2026-01-19 17:05:00.000000",
+    "doctype": "DocType",
+    "editable_grid": 1,
+    "engine": "InnoDB",
+    "field_order": [
+        "gemini_api_key",
+        "selected_model",
+        "enable_sidebars",
+        "enable_voice",
+        "enable_scheduled_insights"
+    ],
+    "fields": [
+        {
+            "fieldname": "gemini_api_key",
+            "fieldtype": "Password",
+            "label": "Gemini API Key"
+        },
+        {
+            "fieldname": "selected_model",
+            "fieldtype": "Select",
+            "label": "Selected Model",
+            "options": "Gemini 2.0 Flash\nGemini 2.0 Pro\nGemini 2.5 Flash\nGemini 2.5 Pro\nGemini 3.0 Flash\nGemini 3.0 Pro"
+        },
+        {
+            "default": "0",
+            "fieldname": "enable_sidebars",
+            "fieldtype": "Check",
+            "label": "Enable Contextual Sidebars"
+        },
+        {
+            "default": "0",
+            "fieldname": "enable_voice",
+            "fieldtype": "Check",
+            "label": "Enable Voice Interaction"
+        },
+        {
+            "default": "0",
+            "fieldname": "enable_scheduled_insights",
+            "fieldtype": "Check",
+            "label": "Enable Scheduled Daily Insights"
+        }
+    ],
+    "index_web_pages_for_search": 1,
+    "issingle": 1,
+    "links": [],
+    "modified": "2026-01-19 17:05:00.000000",
+    "modified_by": "Administrator",
+    "module": "Erpnextai",
+    "name": "AI Settings",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "print": 1,
+            "read": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": []
+}

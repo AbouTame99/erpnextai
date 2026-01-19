@@ -1,0 +1,16 @@
+{
+    "creation": "2026-01-19 17:10:00.000000",
+    "doctype": "Page",
+    "modified": "2026-01-19 17:10:00.000000",
+    "modified_by": "Administrator",
+    "module": "Erpnextai",
+    "name": "ai-chat",
+    "owner": "Administrator",
+    "page_name": "AI Chat",
+    "roles": [
+        {
+            "role": "System Manager"
+        }
+    ],
+    "title": "AI Chat"
+}
