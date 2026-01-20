@@ -1,16 +1,30 @@
 import frappe
 import google.generativeai as genai
 from frappe import _
+from datetime import datetime, date, timedelta
+from decimal import Decimal
+
+def sanitize_for_ai(data):
+	"""Recursively converts datetimes, dates, and decimals for AI serialization."""
+	if isinstance(data, (list, tuple)):
+		return [sanitize_for_ai(i) for i in data]
+	if isinstance(data, dict):
+		return {k: sanitize_for_ai(v) for k, v in data.items()}
+	if isinstance(data, (datetime, date)):
+		return str(data)
+	if isinstance(data, Decimal):
+		return float(data)
+	return data
 
 # --- TOOL DEFINITIONS (At the top to prevent NameErrors) ---
 
 def get_doc_count(doctype: str):
 	"""Returns the count of documents for a given DocType."""
-	return frappe.db.count(doctype)
+	return sanitize_for_ai(frappe.db.count(doctype))
 
 def get_doc_list(doctype: str, filters: dict = None, fields: list = None, limit: int = 10):
 	"""Returns a list of documents. Default 10 records."""
-	return frappe.get_list(doctype, filters=filters, fields=fields or ["name", "creation", "status"], limit=limit)
+	return sanitize_for_ai(frappe.get_list(doctype, filters=filters, fields=fields or ["name", "creation", "status"], limit=limit))
 
 def get_monthly_stats(doctype: str):
 	"""Returns counts per month for the last 12 months for a DocType."""
@@ -21,7 +35,7 @@ def get_monthly_stats(doctype: str):
 		GROUP BY MONTH(creation)
 		ORDER BY creation ASC
 	""", as_dict=1)
-	return data
+	return sanitize_for_ai(data)
 
 def get_total_sum(doctype: str, sum_field: str, group_by: str):
 	"""Calculates the sum of a field grouped by another field. 
@@ -34,60 +48,60 @@ def get_total_sum(doctype: str, sum_field: str, group_by: str):
 		ORDER BY value DESC
 		LIMIT 10
 	""", as_dict=1)
-	return data
+	return sanitize_for_ai(data)
 
 def get_stock_balance(item_code: str, warehouse: str = None):
 	"""Returns the current stock balance for an item."""
 	filters = {"item_code": item_code}
 	if warehouse:
 		filters["warehouse"] = warehouse
-	return frappe.db.get_value("Bin", filters, ["actual_qty", "ordered_qty", "reserved_qty"], as_dict=1)
+	return sanitize_for_ai(frappe.db.get_value("Bin", filters, ["actual_qty", "ordered_qty", "reserved_qty"], as_dict=1))
 
 def get_item_details(item_code: str):
 	"""Returns full item details but strips useless metadata to save tokens."""
 	doc = frappe.get_doc("Item", item_code).as_dict()
-	return {k: v for k, v in doc.items() if not k.startswith('_') and v is not None}
+	return sanitize_for_ai({k: v for k, v in doc.items() if not k.startswith('_') and v is not None})
 
 def get_customer_balance(customer: str):
 	"""Returns the outstanding balance for a customer."""
-	return frappe.db.get_value("Customer", customer, "outstanding_amount")
+	return sanitize_for_ai(frappe.db.get_value("Customer", customer, "outstanding_amount"))
 
 def get_customer_details(customer: str):
 	"""Returns full customer details (address, group, territory, loyalty)."""
 	doc = frappe.get_doc("Customer", customer).as_dict()
-	return {k: v for k, v in doc.items() if not k.startswith('_') and v is not None}
+	return sanitize_for_ai({k: v for k, v in doc.items() if not k.startswith('_') and v is not None})
 
 def get_supplier_details(supplier: str):
 	"""Returns full supplier details stripped of metadata."""
 	doc = frappe.get_doc("Supplier", supplier).as_dict()
-	return {k: v for k, v in doc.items() if not k.startswith('_') and v is not None}
+	return sanitize_for_ai({k: v for k, v in doc.items() if not k.startswith('_') and v is not None})
 
 def get_project_status(project: str):
 	"""Returns the completion percentage and status of a project."""
-	return frappe.db.get_value("Project", project, ["status", "percent_complete", "expected_end_date"], as_dict=1)
+	return sanitize_for_ai(frappe.db.get_value("Project", project, ["status", "percent_complete", "expected_end_date"], as_dict=1))
 
 def get_open_tasks(project: str = None):
 	"""Returns a list of open tasks, optionally filtered by project."""
 	filters = {"status": ["not in", ["Completed", "Cancelled"]]}
 	if project:
 		filters["project"] = project
-	return frappe.get_list("Task", filters=filters, fields=["subject", "status", "priority", "exp_end_date"])
+	return sanitize_for_ai(frappe.get_list("Task", filters=filters, fields=["subject", "status", "priority", "exp_end_date"]))
 
 def get_account_balance(account: str):
 	"""Returns the current balance of a GL Account."""
-	return frappe.db.get_value("Account", account, "balance")
+	return sanitize_for_ai(frappe.db.get_value("Account", account, "balance"))
 
 def get_lead_stats():
 	"""Returns lead counts grouped by status for a conversion funnel."""
-	return frappe.db.sql("""
+	return sanitize_for_ai(frappe.db.sql("""
 		SELECT status as label, COUNT(*) as value
 		FROM `tabLead`
 		GROUP BY status
-	""", as_dict=1)
+	""", as_dict=1))
 
 def get_recent_logs(doctype: str, limit: int = 10):
 	"""Returns the most recent activity logs for a specific DocType."""
-	return frappe.get_list("Activity Log", filters={"reference_doctype": doctype}, limit=limit, order_by="creation desc")
+	return sanitize_for_ai(frappe.get_list("Activity Log", filters={"reference_doctype": doctype}, limit=limit, order_by="creation desc"))
 
 def get_rfm_stats(customer: str):
 	"""Provides Recency, Frequency, and Monetary (RFM) analytics for a customer.
@@ -100,7 +114,7 @@ def get_rfm_stats(customer: str):
 		FROM `tabSales Invoice`
 		WHERE customer = %s AND docstatus = 1
 	""", (customer), as_dict=1)
-	return stats[0] if stats else None
+	return sanitize_for_ai(stats[0] if stats else None)
 
 # --- MAIN API HANDLER ---
 
