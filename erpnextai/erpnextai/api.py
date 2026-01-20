@@ -143,6 +143,10 @@ def find_customer(search_text: str):
 		fields=["name", "customer_name"]
 	))
 
+def get_doctype_fields(doctype: str):
+	"""Returns a list of all available fields for a DocType. Use this to debug 'Unknown column' errors."""
+	return sanitize_for_ai([f.fieldname for f in frappe.get_meta(doctype).fields])
+
 # --- MAIN API HANDLER ---
 
 @frappe.whitelist()
@@ -174,7 +178,7 @@ def get_chat_response(query, history=None):
 		get_stock_balance, get_item_details, get_customer_balance, get_customer_details,
 		get_supplier_details, get_project_status, get_open_tasks,
 		get_account_balance, get_lead_stats, get_recent_logs, get_rfm_stats,
-		find_customer
+		find_customer, get_doctype_fields
 	]
 	
 	system_instruction = """
@@ -199,6 +203,7 @@ def get_chat_response(query, history=None):
 	- When a user asks for a 'Summary', 'Deep Dive', or 'Analytics', use MULTIPLE tools (e.g., get_rfm_stats + get_customer_details + get_doc_list).
 	- Be bold. Interpret the data. If a customer hasn't bought in 30 days, call it a 'Retention Risk'.
 	- IF A CUSTOMER ID IS NOT FOUND (e.g., "Salem" returns no data), ALWAYS use `find_customer` with the name (e.g., `find_customer("Salem")`) to check if you should use a different ID (like "CUST-00001").
+	- IF YOU HIT A DATABASE ERROR (e.g., "Unknown column"), use `get_doctype_fields` to find the correct field name and try again.
 	- "Salem" might be a partial name. `find_customer` will help you map it to the real ID.
 	- If a customer has no transactions, don't just say "No data". Explain that they might be a new lead or have draft invoices only.
 	- For RFM, clearly state the Recency, Frequency, and Monetary scores (1-5) and provide a business recommendation.
