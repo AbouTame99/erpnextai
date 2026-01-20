@@ -14,6 +14,61 @@ erpnextai.AIChat = class {
         this.prepare_layout();
         this.setup_events();
         this.history = [];
+        this.setup_feedback_button();
+    }
+
+    setup_feedback_button() {
+        this.page.add_inner_button(__('Report Issue <i class="fa fa-bug" style="margin-left: 5px;"></i>'), () => {
+            let d = new frappe.ui.Dialog({
+                title: __('Report AI Issue / Feedback'),
+                fields: [
+                    {
+                        label: __('Subject'),
+                        fieldname: 'subject',
+                        fieldtype: 'Data',
+                        reqd: 1,
+                        placeholder: __('e.g., Chart not rendering correctly')
+                    },
+                    {
+                        label: __('Type'),
+                        fieldname: 'feedback_type',
+                        fieldtype: 'Select',
+                        options: ['Bug', 'Suggestion', 'Other'],
+                        default: 'Bug',
+                        reqd: 1
+                    },
+                    {
+                        label: __('Message'),
+                        fieldname: 'message',
+                        fieldtype: 'Small Text',
+                        reqd: 1,
+                        placeholder: __('Describe the problem or your idea here...')
+                    }
+                ],
+                primary_action_label: __('Submit Report'),
+                primary_action: (values) => {
+                    frappe.call({
+                        method: 'frappe.client.insert',
+                        args: {
+                            doc: {
+                                doctype: 'AI Feedback',
+                                ...values
+                            }
+                        },
+                        callback: (r) => {
+                            if (!r.exc) {
+                                frappe.show_alert({
+                                    message: __('Feedback submitted! Thank you for helping us improve.'),
+                                    indicator: 'green'
+                                });
+                                d.hide();
+                            }
+                        }
+                    });
+                }
+            });
+            d.show();
+        });
     }
 
     prepare_layout() {
