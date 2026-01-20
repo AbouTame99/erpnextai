@@ -105,7 +105,9 @@ def get_recent_logs(doctype: str, limit: int = 10):
 
 def get_rfm_stats(customer: str):
 	"""Provides Recency, Frequency, and Monetary (RFM) analytics for a customer.
-	Includes: days since last purchase, total number of orders, and total spent."""
+	Includes: days since last purchase, total number of orders, and total spent.
+	Also calculates an RFM Score (1-5) for categorization."""
+	# Get raw stats
 	stats = frappe.db.sql(f"""
 		SELECT 
 			DATEDIFF(CURDATE(), MAX(posting_date)) as recency_days,
@@ -114,7 +116,27 @@ def get_rfm_stats(customer: str):
 		FROM `tabSales Invoice`
 		WHERE customer = %s AND docstatus = 1
 	""", (customer), as_dict=1)
-	return sanitize_for_ai(stats[0] if stats else None)
+	
+	res = stats[0] if stats and stats[0].get('frequency') > 0 else None
+	if not res:
+		return {"error": f"No submitted sales found for customer '{customer}'"}
+
+	# Simple scoring logic (can be refined based on business averages)
+	# Scoring 1-5 (5 is best)
+	res['recency_score'] = 5 if res['recency_days'] < 30 else (4 if res['recency_days'] < 90 else (3 if res['recency_days'] < 180 else (2 if res['recency_days'] < 365 else 1)))
+	res['frequency_score'] = 5 if res['frequency'] > 10 else (4 if res['frequency'] > 5 else (3 if res['frequency'] > 2 else (2 if res['frequency'] > 1 else 1)))
+	res['monetary_score'] = 5 if res['monetary'] > 10000 else (4 if res['monetary'] > 5000 else (3 if res['monetary'] > 1000 else (2 if res['monetary'] > 100 else 1)))
+	
+	res['total_rfm_score'] = f"{res['recency_score']}{res['frequency_score']}{res['monetary_score']}"
+	
+	return sanitize_for_ai(res)
+
+def find_customer(search_text: str):
+	"""Finds a customer ID based on a partial name match. Use this if the ID is unknown."""
+	return sanitize_for_ai(frappe.get_all("Customer", 
+		filters={"customer_name": ["like", f"%{search_text}%"]},
+		fields=["name", "customer_name"]
+	))
 
 # --- MAIN API HANDLER ---
 
@@ -146,7 +168,8 @@ def get_chat_response(query, history=None):
 		get_doc_count, get_doc_list, get_monthly_stats, get_total_sum,
 		get_stock_balance, get_item_details, get_customer_balance, get_customer_details,
 		get_supplier_details, get_project_status, get_open_tasks,
-		get_account_balance, get_lead_stats, get_recent_logs, get_rfm_stats
+		get_account_balance, get_lead_stats, get_recent_logs, get_rfm_stats,
+		find_customer
 	]
 	
 	system_instruction = """
@@ -170,7 +193,9 @@ def get_chat_response(query, history=None):
 	STRATEGIC RULES:
 	- When a user asks for a 'Summary', 'Deep Dive', or 'Analytics', use MULTIPLE tools (e.g., get_rfm_stats + get_customer_details + get_doc_list).
 	- Be bold. Interpret the data. If a customer hasn't bought in 30 days, call it a 'Retention Risk'.
-	- If asked for Salem, use `get_customer_details` to see his address, group, and loyalty data before answering.
+	- IF A CUSTOMER ID IS NOT FOUND (e.g., "Salem" returns no data), ALWAYS use `find_customer` to check if you should use a different ID (like "CUST-00001").
+	- If a customer has no transactions, don't just say "No data". Explain that they might be a new lead or have draft invoices only.
+	- For RFM, clearly state the Recency, Frequency, and Monetary scores (1-5) and provide a business recommendation.
 	"""
 	
 	# Handle history (Gemini format: [{"role": "user", "parts": ["..."]}, {"role": "model", "parts": ["..."]}])
