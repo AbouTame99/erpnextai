@@ -63,8 +63,13 @@ def get_item_details(item_code: str):
 	return sanitize_for_ai({k: v for k, v in doc.items() if not k.startswith('_') and v is not None})
 
 def get_customer_balance(customer: str):
-	"""Returns the outstanding balance for a customer."""
-	return sanitize_for_ai(frappe.db.get_value("Customer", customer, "outstanding_amount"))
+	"""Returns the outstanding balance for a customer calculated from their invoices."""
+	balance = frappe.db.sql("""
+		SELECT SUM(outstanding_amount) 
+		FROM `tabSales Invoice` 
+		WHERE customer = %s AND docstatus = 1
+	""", (customer))
+	return sanitize_for_ai(balance[0][0] if balance else 0)
 
 def get_customer_details(customer: str):
 	"""Returns full customer details (address, group, territory, loyalty)."""
@@ -193,7 +198,8 @@ def get_chat_response(query, history=None):
 	STRATEGIC RULES:
 	- When a user asks for a 'Summary', 'Deep Dive', or 'Analytics', use MULTIPLE tools (e.g., get_rfm_stats + get_customer_details + get_doc_list).
 	- Be bold. Interpret the data. If a customer hasn't bought in 30 days, call it a 'Retention Risk'.
-	- IF A CUSTOMER ID IS NOT FOUND (e.g., "Salem" returns no data), ALWAYS use `find_customer` to check if you should use a different ID (like "CUST-00001").
+	- IF A CUSTOMER ID IS NOT FOUND (e.g., "Salem" returns no data), ALWAYS use `find_customer` with the name (e.g., `find_customer("Salem")`) to check if you should use a different ID (like "CUST-00001").
+	- "Salem" might be a partial name. `find_customer` will help you map it to the real ID.
 	- If a customer has no transactions, don't just say "No data". Explain that they might be a new lead or have draft invoices only.
 	- For RFM, clearly state the Recency, Frequency, and Monetary scores (1-5) and provide a business recommendation.
 	"""

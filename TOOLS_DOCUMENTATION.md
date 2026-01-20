@@ -26,5 +26,12 @@ The AI assistant now has a "Big Library" of tools categorized by module.
 
 ---
 
+
+### Specialized Tools
+- **`find_customer(search_text)`**: Resolves a name to a valid Customer ID using partial matching.
+- **`get_rfm_stats(customer)`**: Calculates Recency, Frequency, and Monetary scores (1-5) and provide a business ranking.
+
+---
 ### Visualization
 Whenever the AI provides "Analytics", "Funnel", or "Growth" data, it will generate an interactive **Bar, Line, Pie, or Donut Chart** automatically.
+
